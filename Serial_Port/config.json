@@ -87,7 +87,7 @@
       "send_sync": false
     },
     "receive": {
-      "hex_receive": true,
+      "hex_receive": false,
       "timestamp": false,
       "auto_clear_receive": false
     },

@@ -96,6 +96,19 @@ class SerialAppClass(QMainWindow):
         # 设置同步功能
         self.setup_sync_function()
 
+        # 设置速度滑块范围（默认-100到100）
+        self.ui.speed_ctrl_hsld.setMinimum(-100)
+        self.ui.speed_ctrl_hsld.setMaximum(100)
+        self.ui.speed_ctrl_hsld.setValue(0)
+
+        # 设置上下限文本框的默认值
+        self.ui.speed_ctrl_min_ledit.setText("-100")
+        self.ui.speed_ctrl_max_ledit.setText("100")
+
+        # 初始化速度显示
+        self.ui.speed_ledit.setText("0")
+        self.ui.speed_ctrl_ledit.setText("0")
+
     def setup_text_edits(self):
         """设置接收和发送文本框"""
         # 接收文本框
@@ -175,6 +188,7 @@ class SerialAppClass(QMainWindow):
         self.ui.auto_send_btn.clicked.connect(self.on_auto_send_changed)
         self.ui.auto_sendTime_lEdit.textChanged.connect(self.on_auto_send_time_changed)
         self.ui.port_cb.currentIndexChanged.connect(self.update_port_info_display)
+        self.ui.speed_ctrl_btn.clicked.connect(self.speed_ctrl_send)
 
         # 复选框信号 - 添加自动保存
         self.ui.hex_receive_chb.stateChanged.connect(self.on_hex_receive_changed)
@@ -204,6 +218,10 @@ class SerialAppClass(QMainWindow):
 
         # 速度设置
         self.ui.speed_ctrl_hsld.valueChanged.connect(self.speed_setting_changed)
+
+        # 连接上下限文本框编辑完成事件
+        self.ui.speed_ctrl_min_ledit.editingFinished.connect(self.update_slider_range)
+        self.ui.speed_ctrl_max_ledit.editingFinished.connect(self.update_slider_range)
 
     def auto_save_settings(self):
         """自动保存设置"""
@@ -304,6 +322,8 @@ class SerialAppClass(QMainWindow):
 
         # 追加到接收文本框
         self.append_to_receive(display_text)
+
+        self.parse_string_data(data)
 
     def append_to_receive(self, text):
         """将文本追加到接收文本框"""
@@ -894,8 +914,127 @@ class SerialAppClass(QMainWindow):
         pass
 
     def speed_setting_changed(self):
+
         self.ui.speed_ctrl_ledit.setText(str(self.ui.speed_ctrl_hsld.value()))
-        self.ui.speed_ledit.setText(str(self.ui.speed_ctrl_hsld.value()))
+
+    def parse_string_data(self, data):
+        """
+        最简单的速度解析
+        假设格式总是: 字母 + ":" + 数字
+        """
+        try:
+            # 获取字符串
+            data_str = ""
+            if hasattr(data, 'data'):
+                data_str = data.data().decode('utf-8', errors='ignore').strip()
+            elif isinstance(data, bytes):
+                data_str = data.decode('utf-8', errors='ignore').strip()
+            else:
+                data_str = str(data).strip()
+
+            if not data_str:
+                return
+
+            print(f"收到: {data_str}")
+
+            # 查找冒号
+            colon_index = -1
+            for i, char in enumerate(data_str):
+                if char == ':':
+                    colon_index = i
+                    break
+
+            if colon_index >= 0:
+                # 提取冒号后面的部分
+                number_part = data_str[colon_index + 1:].strip()
+
+                # 直接转换
+                try:
+                    speed = float(number_part)
+                    self.ui.speed_ledit.setText(str(speed))
+                    if speed >= 10:
+                        self.set_motor_status("forward")
+                    elif speed <= -10:
+                        self.set_motor_status("reverse")
+                    else:
+                        self.set_motor_status("stop")
+
+                except ValueError:
+                    self.ui.speed_ledit.setText(f"✗ 转换失败: {number_part}")
+
+            else:
+                self.ui.speed_ledit.setText(f"✗ 没有找到冒号: {data_str}")
+
+        except Exception as e:
+            self.ui.speed_ledit.setText(f" 解析失败：{e}")
+
+    def speed_ctrl_send(self):
+
+        send_str = f"set speed:{int(self.ui.speed_ctrl_ledit.text().strip())}\n"  # 添加换行符方便下位机解析
+
+        # 发送数据
+        self.serial_process.send_data(send_str, "", False)
+
+    def update_slider_range(self):
+        """根据文本框更新滑块的上下限范围"""
+        try:
+            # 获取最小值
+            min_text = self.ui.speed_ctrl_min_ledit.text().strip()
+            min_value = int(min_text) if min_text else -100
+
+            # 获取最大值
+            max_text = self.ui.speed_ctrl_max_ledit.text().strip()
+            max_value = int(max_text) if max_text else 100
+
+            # 验证范围
+            if min_value >= max_value:
+                QMessageBox.warning(None, "警告", "最小值必须小于最大值")
+                # 恢复默认值
+                self.ui.speed_ctrl_min_ledit.setText("-100")
+                self.ui.speed_ctrl_max_ledit.setText("100")
+                min_value, max_value = -100, 100
+
+            # 更新滑块范围
+            self.ui.speed_ctrl_hsld.setMinimum(min_value)
+            self.ui.speed_ctrl_hsld.setMaximum(max_value)
+
+            # 保存设置（如果需要）
+            # self.save_settings()
+
+        except ValueError:
+            QMessageBox.warning(None, "警告", "请输入有效的整数")
+            # 恢复默认值
+            self.ui.speed_ctrl_min_ledit.setText("-100")
+            self.ui.speed_ctrl_max_ledit.setText("100")
+            self.ui.speed_ctrl_hsld.setMinimum(-100)
+            self.ui.speed_ctrl_hsld.setMaximum(100)
+
+    def set_motor_status(self, status):
+        """设置电机状态显示 - 超简版"""
+        # 重置所有标签
+        self.ui.forward_lbl.setStyleSheet("background-color: lightgray;")
+        self.ui.reversal_lbl.setStyleSheet("background-color: lightgray;")
+        self.ui.cease_lbl.setStyleSheet("background-color: lightgray;")
+
+        # 设置当前状态标签
+        if status == 'forward':
+            self.ui.forward_lbl.setStyleSheet("""
+                background-color: lightgreen; 
+                font-weight: bold; 
+                border: 2px solid green;
+            """)
+        elif status == 'reverse':
+            self.ui.reversal_lbl.setStyleSheet("""
+                background-color: lightblue; 
+                font-weight: bold; 
+                border: 2px solid blue;
+            """)
+        elif status == 'stop':
+            self.ui.cease_lbl.setStyleSheet("""
+                background-color: #ffcccc; 
+                font-weight: bold; 
+                border: 2px solid red;
+            """)
 
     def closeEvent(self, event):
         """关闭时停止定时器"""

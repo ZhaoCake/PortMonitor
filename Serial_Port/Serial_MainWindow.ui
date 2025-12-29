@@ -1091,22 +1091,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="reversal_lbl">
-        <property name="font">
-         <font>
-          <family>楷体</family>
-          <pointsize>16</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>反转</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QLabel" name="cease_lbl">
         <property name="font">
          <font>
@@ -1116,6 +1100,22 @@
         </property>
         <property name="text">
          <string>停止</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="reversal_lbl">
+        <property name="font">
+         <font>
+          <family>楷体</family>
+          <pointsize>16</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>反转</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -1209,7 +1209,7 @@
     <widget class="QLineEdit" name="speed_ctrl_ledit">
      <property name="geometry">
       <rect>
-       <x>250</x>
+       <x>253</x>
        <y>280</y>
        <width>131</width>
        <height>41</height>
@@ -1228,6 +1228,63 @@
       <bool>true</bool>
      </property>
     </widget>
+    <widget class="QPushButton" name="speed_ctrl_btn">
+     <property name="geometry">
+      <rect>
+       <x>55</x>
+       <y>284</y>
+       <width>75</width>
+       <height>29</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>楷体</family>
+       <pointsize>16</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>发送</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="speed_ctrl_min_ledit">
+     <property name="geometry">
+      <rect>
+       <x>156</x>
+       <y>285</y>
+       <width>51</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Times New Roman</family>
+       <pointsize>16</pointsize>
+      </font>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="speed_ctrl_max_ledit">
+     <property name="geometry">
+      <rect>
+       <x>432</x>
+       <y>286</y>
+       <width>51</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Times New Roman</family>
+       <pointsize>16</pointsize>
+      </font>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -1236,7 +1293,7 @@
      <x>0</x>
      <y>0</y>
      <width>1647</width>
-     <height>27</height>
+     <height>23</height>
     </rect>
    </property>
   </widget>
