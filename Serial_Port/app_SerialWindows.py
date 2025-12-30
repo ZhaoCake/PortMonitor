@@ -998,8 +998,7 @@ class SerialAppClass(QMainWindow):
             self.ui.speed_ctrl_hsld.setMinimum(min_value)
             self.ui.speed_ctrl_hsld.setMaximum(max_value)
 
-            # 保存设置（如果需要）
-            # self.save_settings()
+            self.ui.speed_ctrl_hsld.setValue(0)
 
         except ValueError:
             QMessageBox.warning(None, "警告", "请输入有效的整数")

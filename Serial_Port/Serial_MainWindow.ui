@@ -1259,7 +1259,7 @@
      <property name="font">
       <font>
        <family>Times New Roman</family>
-       <pointsize>16</pointsize>
+       <pointsize>14</pointsize>
       </font>
      </property>
      <property name="alignment">
@@ -1278,7 +1278,7 @@
      <property name="font">
       <font>
        <family>Times New Roman</family>
-       <pointsize>16</pointsize>
+       <pointsize>14</pointsize>
       </font>
      </property>
      <property name="alignment">
@@ -1293,7 +1293,7 @@
      <x>0</x>
      <y>0</y>
      <width>1647</width>
-     <height>23</height>
+     <height>27</height>
     </rect>
    </property>
   </widget>
