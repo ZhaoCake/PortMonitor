@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1647</width>
+    <width>1332</width>
     <height>810</height>
    </rect>
   </property>
@@ -800,7 +800,7 @@
          </font>
         </property>
         <property name="text">
-         <string>未尝试连接</string>
+         <string>尝试连接</string>
         </property>
        </widget>
       </item>
@@ -994,7 +994,7 @@
       <rect>
        <x>156</x>
        <y>285</y>
-       <width>51</width>
+       <width>71</width>
        <height>31</height>
       </rect>
      </property>
@@ -1011,9 +1011,9 @@
     <widget class="QLineEdit" name="speed_ctrl_max_ledit">
      <property name="geometry">
       <rect>
-       <x>432</x>
+       <x>412</x>
        <y>286</y>
-       <width>51</width>
+       <width>71</width>
        <height>31</height>
       </rect>
      </property>
@@ -1034,7 +1034,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1647</width>
+     <width>1332</width>
      <height>26</height>
     </rect>
    </property>

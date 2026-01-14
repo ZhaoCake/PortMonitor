@@ -185,6 +185,7 @@ class SerialAppClass(QMainWindow):
         self.ui.auto_sendTime_lEdit.textChanged.connect(self.on_auto_send_time_changed)
         self.ui.port_cb.currentIndexChanged.connect(self.update_port_info_display)
         self.ui.speed_ctrl_btn.clicked.connect(self.speed_ctrl_send)
+        self.ui.connect_btn.clicked.connect(self.on_connect_clicked)
 
         # 复选框信号 - 添加自动保存
         self.ui.hex_receive_chb.stateChanged.connect(self.on_hex_receive_changed)
@@ -295,6 +296,11 @@ class SerialAppClass(QMainWindow):
     def on_data_received(self, data):
         """处理接收到的数据"""
 
+        # 判断是否是电机数据
+        smart_text = data.data().decode('utf-8', errors='ignore')
+        if smart_text.startswith("[M]:"):
+            self.motor_data_process(smart_text[4:])
+
         # 更新接收数据大小
         self.receive_data_size += len(data)
 
@@ -315,8 +321,6 @@ class SerialAppClass(QMainWindow):
 
         # 追加到接收文本框
         self.append_to_receive(display_text)
-
-        self.parse_string_data(data)
 
     def append_to_receive(self, text):
         """将文本追加到接收文本框"""
@@ -910,63 +914,10 @@ class SerialAppClass(QMainWindow):
 
         self.ui.speed_ctrl_ledit.setText(str(self.ui.speed_ctrl_hsld.value()))
 
-    def parse_string_data(self, data):
-        """
-        最简单的速度解析
-        假设格式总是: 字母 + ":" + 数字
-        """
-        try:
-            # 获取字符串
-            data_str = ""
-            if hasattr(data, 'data'):
-                data_str = data.data().decode('utf-8', errors='ignore').strip()
-            elif isinstance(data, bytes):
-                data_str = data.decode('utf-8', errors='ignore').strip()
-            else:
-                data_str = str(data).strip()
-
-            if not data_str:
-                return
-
-            print(f"收到: {data_str}")
-
-            # 查找冒号
-            colon_index = -1
-            for i, char in enumerate(data_str):
-                if char == ':':
-                    colon_index = i
-                    break
-
-            if colon_index >= 0:
-                # 提取冒号后面的部分
-                number_part = data_str[colon_index + 1:].strip()
-
-                # 直接转换
-                try:
-                    speed = float(number_part)
-                    self.ui.speed_ledit.setText(str(speed))
-                    if speed >= 10:
-                        self.set_motor_status("forward")
-                    elif speed <= -10:
-                        self.set_motor_status("reverse")
-                    else:
-                        self.set_motor_status("stop")
-
-                except ValueError:
-                    self.ui.speed_ledit.setText(f"✗ 转换失败: {number_part}")
-
-            else:
-                self.ui.speed_ledit.setText(f"✗ 没有找到冒号: {data_str}")
-
-        except Exception as e:
-            self.ui.speed_ledit.setText(f" 解析失败：{e}")
-
     def speed_ctrl_send(self):
-
-        send_str = f"set speed:{int(self.ui.speed_ctrl_ledit.text().strip())}\n"  # 添加换行符方便下位机解析
-
-        # 发送数据
-        self.serial_process.send_data(send_str, "", False)
+        self.actual_text = "[M]:0," + str(self.ui.speed_ctrl_hsld.value()) + "\n"
+        self.ui.send_tEdit.setPlainText(self.actual_text)
+        self.send_data()
 
     def update_slider_range(self):
         """根据文本框更新滑块的上下限范围"""
@@ -1027,6 +978,30 @@ class SerialAppClass(QMainWindow):
                 font-weight: bold; 
                 border: 2px solid red;
             """)
+
+    def on_connect_clicked(self):
+        """连接按钮点击"""
+        self.actual_text = f"[M]:1,0\n"
+        self.ui.send_tEdit.setPlainText(self.actual_text)
+        self.send_data()
+
+    def motor_data_process(self, smart_text):
+        smart_text = smart_text.strip()
+        parts = smart_text.split(',')
+        if len(parts) == 2:
+            # print(f"解析成功: 第一个数={int(parts[0])}, 第二个数={int(parts[1])}")
+            if int(parts[0]) == 2:
+                self.ui.connect_btn.setText("已连接")
+            else:
+                self.ui.speed_ledit.setText(str(parts[1]))
+                if int(parts[1]) <= -10:
+                    self.set_motor_status('reverse')
+                elif int(parts[1]) >= 10:
+                    self.set_motor_status('forward')
+                else:
+                    self.set_motor_status('stop')
+        else:
+            print(f"格式错误: 期待2个数字，得到{len(parts)}个")
 
     def closeEvent(self, event):
         """关闭时停止定时器"""
