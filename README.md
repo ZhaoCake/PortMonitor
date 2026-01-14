@@ -14,7 +14,6 @@
 
 ```
 pip install PyQt5==5.15.11
-pip install matplotlib==3.10.7
 ```
 
 #### 目前安装的软件包有:
@@ -84,3 +83,6 @@ pip install matplotlib==3.10.7
 | QRadioButton | radioButton | **rbtn**  |  |
 | QLCDNumber   | lcdNumber | **lcdn**  |  |
 | QSlider      | horizontalSlider | **hsld**  |  |
+
+## 常见git错误
+git config --global --add safe.directory F:/Active_Folders/PortMonitor

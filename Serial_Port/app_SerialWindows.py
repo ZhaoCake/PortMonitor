@@ -11,7 +11,6 @@ from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from Serial_Port.Serial_MainWindow import Ui_Serial_MainWindow
 from Serial_Port.config_manager import JSONConfigManager
 from Serial_Port.app_SerialProcess import SerialProcess
-from Serial_Port.app_MathProcess import MathFunctionSender
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -37,9 +36,6 @@ class SerialAppClass(QMainWindow):
 
         # 初始化串口处理类
         self.serial_process = SerialProcess()
-
-        # 初始化数学函数发送器
-        self.math_sender = MathFunctionSender(self)
 
         # 初始化界面
         self.init_serial_ui()
@@ -212,9 +208,6 @@ class SerialAppClass(QMainWindow):
 
         # 其他-添加自动保存
         self.ui.send_sync_rbtn.toggled.connect(self.auto_save_settings)
-
-        # 数学函数信号
-        self.math_sender.connect_math_signals()
 
         # 速度设置
         self.ui.speed_ctrl_hsld.valueChanged.connect(self.speed_setting_changed)
