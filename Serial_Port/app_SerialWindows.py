@@ -5,13 +5,18 @@ from datetime import datetime
 from PyQt5 import QtCore
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QFont, QTextCursor
-from PyQt5.QtWidgets import QMainWindow, QMessageBox, QFileDialog, QTextEdit
+from PyQt5.QtWidgets import QMainWindow, QMessageBox, QFileDialog, QTextEdit, QVBoxLayout
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 
 from Serial_Port.Serial_MainWindow import Ui_Serial_MainWindow
 from Serial_Port.config_manager import JSONConfigManager
 from Serial_Port.app_SerialProcess import SerialProcess
 from typing import TYPE_CHECKING
+
+from datetime import datetime
+import numpy as np
+import pyqtgraph as pg
+from collections import deque
 
 if TYPE_CHECKING:
     from WindowManager import WindowManagerClass
@@ -72,6 +77,14 @@ class SerialAppClass(QMainWindow):
         # 同步状态标志
         self.is_syncing = False
 
+        # 添加速度可视化相关属性
+        self.speed_history = deque(maxlen=200)  # 保存200个数据点
+        self.send_count_history = deque(maxlen=200)  # 发送数历史
+        self.send_count = 0  # 发送计数器
+
+        # 初始化界面
+        self.init_serial_ui()
+
     def init_serial_ui(self):
         """初始化串口界面"""
         # 初始化波特率组合框
@@ -104,6 +117,9 @@ class SerialAppClass(QMainWindow):
         # 初始化速度显示
         self.ui.speed_ledit.setText("0")
         self.ui.speed_ctrl_ledit.setText("0")
+
+        # 初始化速度图表
+        self.init_speed_chart()
 
     def setup_text_edits(self):
         """设置接收和发送文本框"""
@@ -298,6 +314,7 @@ class SerialAppClass(QMainWindow):
 
         # 判断是否是电机数据
         smart_text = data.data().decode('utf-8', errors='ignore')
+        # print(smart_text)
         if smart_text.startswith("[M]:"):
             self.motor_data_process(smart_text[4:])
 
@@ -915,8 +932,12 @@ class SerialAppClass(QMainWindow):
         self.ui.speed_ctrl_ledit.setText(str(self.ui.speed_ctrl_hsld.value()))
 
     def speed_ctrl_send(self):
-        self.actual_text = "[M]:0," + str(self.ui.speed_ctrl_hsld.value()) + "\n"
-        self.ui.send_tEdit.setPlainText(self.actual_text)
+        # 获取滑块当前值
+        slider_value = self.ui.speed_ctrl_hsld.value()
+        data_byte = slider_value.to_bytes(1, 'big', signed=True)
+        # print(f"滑块值: {slider_value}, 字节数据: {data_byte}")
+        self.ui.send_hex_tEdit.setText(str(data_byte.hex()))
+        self.ui.hex_send_chb.setChecked(True)
         self.send_data()
 
     def update_slider_range(self):
@@ -981,27 +1002,136 @@ class SerialAppClass(QMainWindow):
 
     def on_connect_clicked(self):
         """连接按钮点击"""
-        self.actual_text = f"[M]:1,0\n"
-        self.ui.send_tEdit.setPlainText(self.actual_text)
+        if self.ui.connect_btn.text()== "未连接":
+            self.ui.send_hex_tEdit.setText("EF")
+        elif self.ui.connect_btn.text()== "已连接":
+            self.ui.send_hex_tEdit.setText("FF")
+
+        # 设置复选框选中
+        self.ui.hex_send_chb.setChecked(True)
+        self.ui.hex_send_chb.setChecked(True)
         self.send_data()
 
     def motor_data_process(self, smart_text):
         smart_text = smart_text.strip()
         parts = smart_text.split(',')
         if len(parts) == 2:
-            # print(f"解析成功: 第一个数={int(parts[0])}, 第二个数={int(parts[1])}")
-            if int(parts[0]) == 2:
+            part1_clean = parts[0].strip()
+            part2_clean = parts[1].strip()
+            if int(part1_clean) == 1:
                 self.ui.connect_btn.setText("已连接")
+            elif int(part1_clean) == 2:
+                self.ui.connect_btn.setText("未连接")
             else:
-                self.ui.speed_ledit.setText(str(parts[1]))
-                if int(parts[1]) <= -10:
+                # 获取速度值
+                speed_value = float(part2_clean)
+                self.ui.speed_ledit.setText(f"{speed_value:.2f}")
+
+                # 发送数计数
+                self.send_count += 1
+
+                # 更新速度状态
+                if speed_value <= -10.0:
                     self.set_motor_status('reverse')
-                elif int(parts[1]) >= 10:
+                elif speed_value >= 10.0:
                     self.set_motor_status('forward')
                 else:
                     self.set_motor_status('stop')
+
+                # 更新速度图表
+                self.update_speed_chart(speed_value, self.send_count)
         else:
             print(f"格式错误: 期待2个数字，得到{len(parts)}个")
+
+    def init_speed_chart(self):
+        """初始化速度图表 - 放在groupBox_6中"""
+        try:
+            # 确保groupBox_6存在
+            if hasattr(self.ui, 'groupBox_6'):
+                # 清空groupBox_6中可能存在的旧布局
+                if self.ui.groupBox_6.layout():
+                    # 删除旧的小部件
+                    while self.ui.groupBox_6.layout().count():
+                        child = self.ui.groupBox_6.layout().takeAt(0)
+                        if child.widget():
+                            child.widget().deleteLater()
+                else:
+                    # 如果没有布局，创建一个新的垂直布局
+                    self.ui.groupBox_6.setLayout(QVBoxLayout())
+
+                # 创建PyQtGraph绘图控件
+                self.plot_widget = pg.PlotWidget()
+                self.plot_widget.setBackground('white')
+                self.plot_widget.setTitle("速度曲线", color='blue', size='12pt')
+                self.plot_widget.setLabel('left', '速度', units='rpm')
+                self.plot_widget.setLabel('bottom', '发送数')
+                self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
+
+                # 设置坐标轴范围
+                self.plot_widget.setYRange(-100, 100)
+
+                # 创建曲线
+                self.speed_curve = self.plot_widget.plot(pen=pg.mkPen(color='blue', width=2))
+
+                # 添加一条零线作为参考
+                zero_line = pg.InfiniteLine(pos=0, angle=0, pen=pg.mkPen('gray', width=1, style=QtCore.Qt.DashLine))
+                self.plot_widget.addItem(zero_line)
+
+                # 将绘图控件添加到groupBox_6
+                self.ui.groupBox_6.layout().addWidget(self.plot_widget)
+
+                # 设置groupBox_6的标题
+                self.ui.groupBox_6.setTitle("速度可视化")
+
+                print("速度图表初始化完成")
+            else:
+                print("警告：未找到groupBox_6，无法创建图表")
+
+        except Exception as e:
+            print(f"初始化速度图表时出错: {e}")
+            # 可选：显示错误信息
+            import traceback
+            traceback.print_exc()
+
+    def update_speed_chart(self, speed, count):
+        """更新速度图表"""
+        try:
+            # 检查图表是否已初始化
+            if not hasattr(self, 'speed_curve'):
+                print("图表未初始化")
+                return
+
+            # 添加到历史数据
+            self.speed_history.append(speed)
+            self.send_count_history.append(count)
+
+            # 更新曲线数据
+            self.speed_curve.setData(list(self.send_count_history), list(self.speed_history))
+
+            # 自动调整X轴范围（显示最近100个点）
+            if count > 100:
+                self.plot_widget.setXRange(count - 100, count)
+            else:
+                self.plot_widget.setXRange(0, max(100, count))
+
+            # 自动调整Y轴范围，带边距
+            if len(self.speed_history) > 0:
+                min_val = min(self.speed_history)
+                max_val = max(self.speed_history)
+                margin = max(abs(min_val), abs(max_val), 10) * 0.1  # 10%边距，至少10
+                self.plot_widget.setYRange(min_val - margin, max_val + margin)
+
+        except Exception as e:
+            print(f"更新图表时出错: {e}")
+
+    def clear_chart_data(self):
+        """清空图表数据"""
+        if hasattr(self, 'speed_history'):
+            self.speed_history.clear()
+            self.send_count_history.clear()
+            self.send_count = 0
+            if hasattr(self, 'speed_curve'):
+                self.speed_curve.clear()
 
     def closeEvent(self, event):
         """关闭时停止定时器"""
