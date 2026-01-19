@@ -2,7 +2,9 @@
 
 一个运用PYQT5的串口监视工具。
 
-[详细信息](./docs/docs.md)
+[项目架构](./docs/archi.md)
+[技术实现](./docs/technical_implementation.md)
+[Chapter_6](./docs/Chapter_6.md)
 
 ---
 
